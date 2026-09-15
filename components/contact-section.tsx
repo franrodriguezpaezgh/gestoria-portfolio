@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { supabase } from "@/lib/supabase"
 import {
   Select,
   SelectContent,
@@ -45,7 +46,7 @@ const initialForm: ContactFormData = {
 
 export function ContactSection() {
   const [form, setForm] = useState<ContactFormData>(initialForm)
-  const [status, setStatus] = useState<"idle" | "submitting" | "success">("idle")
+  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle")
 
   function updateField<K extends keyof ContactFormData>(key: K, value: ContactFormData[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -55,14 +56,19 @@ export function ContactSection() {
     event.preventDefault()
     setStatus("submitting")
 
-    // TODO: Conectar con Supabase.
-    // Aquí se enviará `form` a la base de datos, por ejemplo:
-    //   const { error } = await supabase.from("solicitudes").insert(form)
-    // Los nombres de los campos ya coinciden con las columnas previstas:
-    // nombre, email, telefono, servicio, mensaje.
-    console.log("[v0] Solicitud de contacto lista para enviar:", form)
+    const { error } = await supabase.from("solicitudes").insert({
+      nombre: form.nombre,
+      email: form.email,
+      telefono: form.telefono,
+      servicio_interes: form.servicio,
+      mensaje: form.mensaje,
+    })
 
-    await new Promise((resolve) => setTimeout(resolve, 800))
+    if (error) {
+      console.error("[v0] Error al enviar solicitud:", error)
+      setStatus("error")
+      return
+    }
 
     setStatus("success")
     setForm(initialForm)
@@ -117,6 +123,12 @@ export function ContactSection() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-5">
+                {status === "error" && (
+                  <p className="text-sm text-destructive">
+                    Hubo un problema al enviar tu solicitud. Inténtalo de nuevo.
+                  </p>
+                )}
+
                 <div className="space-y-2">
                   <Label htmlFor="nombre">Nombre completo</Label>
                   <Input
